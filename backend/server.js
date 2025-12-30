@@ -32,6 +32,8 @@ console.log('JWT_SECRET exists:', !!process.env.JWT_SECRET);
 console.log('PORT:', process.env.PORT || 5000);
 
 console.log('Step 6: Setting up routes...');
+const authRoutes = require('./routes/auth');
+app.use('/api/auth', authRoutes);
 app.get('/', (req, res) => {
   res.json({ message: 'Server is running!' });
 });

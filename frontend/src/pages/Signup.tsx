@@ -12,7 +12,7 @@ export default function Signup({ onNavigate }: SignupProps) {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
 
-  const handleSignup = (e: FormEvent<HTMLFormElement>) => {
+  const handleSignup = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError('');
 
@@ -29,21 +29,43 @@ export default function Signup({ onNavigate }: SignupProps) {
       return;
     }
 
-    // Save user with name
-    localStorage.setItem('user', JSON.stringify({
-      name: name.trim(),
-      email,
-      role,
-      isLoggedIn: true,
-    }));
+    try {
+      const response = await fetch('http://localhost:5000/api/auth/signup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: name.trim(),
+          email,
+          password,
+          role
+        }),
+      });
 
-    // Safe redirect
-    let redirectPage: Page = 'landing' as Page;
-    if (role === 'student') redirectPage = 'studentDashboard' as Page;
-    if (role === 'instructor') redirectPage = 'instructorDashboard' as Page;
-    if (role === 'admin') redirectPage = 'adminDashboard' as Page;
+      const data = await response.json();
 
-    onNavigate(redirectPage);
+      if (!response.ok) {
+        setError(data.message || 'Signup failed');
+        return;
+      }
+
+      localStorage.setItem('user', JSON.stringify({
+        ...data.user,
+        token: data.token,
+        isLoggedIn: true,
+      }));
+
+      let redirectPage: Page = 'landing' as Page;
+      if (role === 'student') redirectPage = 'studentDashboard' as Page;
+      if (role === 'instructor') redirectPage = 'instructorDashboard' as Page;
+      if (role === 'admin') redirectPage = 'adminDashboard' as Page;
+
+      onNavigate(redirectPage);
+    } catch (err) {
+      console.error('Signup error:', err);
+      setError('Network error. Please make sure the server is running.');
+    }
   };
 
   return (

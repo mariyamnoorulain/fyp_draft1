@@ -11,11 +11,10 @@ export default function Login({ onNavigate, setUser }: LoginProps) {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
 
-  const handleLogin = (e: FormEvent<HTMLFormElement>) => {
+  const handleLogin = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError('');
 
-    // ✅ Basic validation
     if (!email.includes('@')) {
       setError('Please enter a valid email');
       return;
@@ -26,35 +25,41 @@ export default function Login({ onNavigate, setUser }: LoginProps) {
       return;
     }
 
-    // ✅ Get user from localStorage
-    const storedUser = localStorage.getItem('user');
+    try {
+      const response = await fetch('http://localhost:5000/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email,
+          password
+        }),
+      });
 
-    if (!storedUser) {
-      setError('User not found. Please sign up first.');
-      return;
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.message || 'Login failed');
+        return;
+      }
+
+      const updatedUser = {
+        ...data.user,
+        token: data.token,
+        isLoggedIn: true,
+      };
+
+      localStorage.setItem('user', JSON.stringify(updatedUser));
+      setUser(updatedUser);
+
+      if (updatedUser.role === 'student') onNavigate('studentDashboard');
+      else if (updatedUser.role === 'instructor') onNavigate('instructorDashboard');
+      else if (updatedUser.role === 'admin') onNavigate('adminDashboard');
+    } catch (err) {
+      console.error('Login error:', err);
+      setError('Network error. Please make sure the server is running.');
     }
-
-    const user = JSON.parse(storedUser);
-
-    // ✅ Email + Password check
-    if (user.email !== email || user.password !== password) {
-      setError('Invalid email or password');
-      return;
-    }
-
-    // ✅ Login success
-    const updatedUser = {
-      ...user,
-      isLoggedIn: true,
-    };
-
-    localStorage.setItem('user', JSON.stringify(updatedUser));
-    setUser(updatedUser);
-
-    // ✅ Role based navigation
-    if (updatedUser.role === 'student') onNavigate('studentDashboard');
-    else if (updatedUser.role === 'instructor') onNavigate('instructorDashboard');
-    else if (updatedUser.role === 'admin') onNavigate('adminDashboard');
   };
 
   return (
